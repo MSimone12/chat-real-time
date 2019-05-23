@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Talks de chat</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
+
+    <link rel="stylesheet" href="../style.css">
+  </head>
+  <body>
+    <h1 id="sala"></h1>
+    <h2 id="connect"></h2>
+    <form id="room">
+      <input type="text" name="room"  placeholder="Digite a sala">
+      <button type="submit">Enviar</button>
+    </form>
+    <form id="username" style="display:none;">
+      <input type="text" name="username" placeholder="Digite seu nome">
+      <button type="submit">Enviar</button>
+    </form>
+    <form id="chat" style="display:none;">
+      <div class="messages"></div>
+      <input type="text" name="message" placeholder="Digite sua mensagem">
+      <button type="submit">Enviar</button>
+    </form>
+    <script>
+      var socket = io('localhost:3000');
+      
+      function renderConnected(connections){
+        $('#connect').html(connections)
+      }
+
+      function renderMessage(message){
+        $('.messages').append(`<div class="message"><strong>${message.author}:</strong> ${message.message}</div>`);
+      }
+
+      function renderUserEntered(user) {
+        $('.messages').append(`<span style="margin-left:auto;margin-right:auto;display:block;">${user} entrou na sala</span>`);
+      }
+
+      function renderUserLeft(user) {
+          $('.messages').append(`<span style="margin-left:auto;margin-right:auto;display:block;">${user} saiu da sala</span>`);
+        }
+
+      socket.on('connected', function(connected) {
+        renderMessage(connected);
+      });
+
+      socket.on('previousMessages', function(messages){
+        for(message of messages){
+          renderMessage(message);
+        }
+      });
+
+      socket.on('userEntered', function(user){
+        renderUserEntered(user)
+      });
+      
+      socket.on('receivedMessage', function(message){
+        renderMessage(message);
+      });
+
+      socket.on('userLeft', function(user){
+        renderUserLeft(user);
+      });
+
+      $('#room').submit(event => {
+        event.preventDefault();
+        
+        var room = $('input[name=room]').val();
+
+        $('#sala').html(room);
+
+        socket.emit('room', room);
+        $('#room').fadeOut()
+        $('#username').fadeIn()
+
+      });
+
+      $('#username').submit(event => {
+        event.preventDefault();
+
+        var username = $('input[name=username]').val();
+
+        socket.emit('user', username)
+
+        $('input[name=username]').attr('disabled', true);
+        $('#username').attr('style', 'height: 5%;').children('button[type=submit]').fadeOut();
+        $('#chat').fadeIn();
+      })
+
+      $('#chat').submit(function(event){
+        event.preventDefault();
+
+        var author = $('input[name=username').val();
+        var message = $('input[name=message').val();
+
+        if(author.length && message.length){
+          var messageObject = {
+            author,
+            message
+          };
+          $('input[name=message').val('');
+          socket.emit('sendMessage', messageObject);
+        }
+      });
+    </script>
+  </body>
+</html>
